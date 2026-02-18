@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THREAT HUNTER</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Oxanium:wght@400;500;600;700;800&display=swap');
+
+:root{--bg:#04060a;--p1:#0ff;--p2:#ff2060;--p3:#ffcc00;--p4:#a040ff;--p5:#00ff88;--p6:#ff6020}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);font-family:'Rajdhani',sans-serif;overflow:hidden;user-select:none;color:#fff}
+canvas{display:block;position:fixed;top:0;left:0;z-index:1}
+
+#hud{position:fixed;top:0;left:0;right:0;z-index:20;pointer-events:none;display:none;padding:10px 16px}
+.hud-r{display:flex;justify-content:space-between;align-items:flex-start}
+.hud-b{display:flex;flex-direction:column;gap:2px}.hud-b.r{align-items:flex-end}.hud-b.c{align-items:center}
+.hud-t{font-size:9px;font-weight:600;letter-spacing:2px;color:#fff3;text-transform:uppercase}
+.hud-v{font-family:'Oxanium';font-size:22px;font-weight:800;background:linear-gradient(to right,#0ff,#00ff88);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+.hud-sc{font-family:'Oxanium';font-size:22px;font-weight:800;color:#fff}
+.bar{width:150px;height:5px;background:#fff1;border-radius:3px;overflow:hidden;margin-top:3px}
+.bar-f{height:100%;border-radius:3px;transition:width 0.15s}
+.hp-f{background:linear-gradient(90deg,#0ff,#00ff88);box-shadow:0 0 8px #0ff4}
+.hp-f.lo{background:linear-gradient(90deg,#ff2060,#ff6020);box-shadow:0 0 8px #ff20604}
+.en-f{background:linear-gradient(90deg,#a040ff,#ff40aa);box-shadow:0 0 8px #a040ff4}
+#combo-h{font-family:'Oxanium';font-weight:800;font-size:16px;color:#ffcc00;opacity:0;transition:opacity 0.1s;text-shadow:0 0 12px #ffcc0044}
+#combo-h.on{opacity:1}
+#streak-h{font-family:'Oxanium';font-weight:700;font-size:11px;color:#ff40aa;opacity:0;transition:opacity 0.12s}
+#streak-h.on{opacity:1}
+.wave-tag{font-family:'Oxanium';font-weight:700;font-size:12px;color:#fff6;letter-spacing:1px}
+
+.ov{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ov.hide{display:none}
+
+.btn{font-family:'Rajdhani';font-size:14px;font-weight:700;padding:12px 36px;margin:5px;border:1px solid #fff1;background:#fff06;color:#fff;cursor:pointer;letter-spacing:2px;transition:all 0.12s;text-transform:uppercase;border-radius:4px}
+.btn:hover{border-color:#0ff;background:#0ff12;box-shadow:0 0 25px #0ff15;color:#0ff}
+.btn.pri{background:linear-gradient(135deg,#0ff15,#a040ff15);border-color:#0ff4}
+.btn.pri:hover{background:linear-gradient(135deg,#0ff25,#a040ff25);border-color:#0ff;box-shadow:0 0 30px #0ff20}
+.btn.share{border-color:#ff206033;color:#ff2060}
+.btn.share:hover{border-color:#ff2060;background:#ff206015}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+
+/* START */
+#start-scr{background:radial-gradient(ellipse at 50% 60%,#0a1a2a 0%,var(--bg) 60%);overflow-y:auto;padding:30px 16px}
+.logo{text-align:center;margin-bottom:32px}
+.logo-pre{font-size:11px;font-weight:600;letter-spacing:8px;color:#fff2;margin-bottom:8px}
+.logo-main{font-family:'Oxanium';font-weight:800;font-size:48px;letter-spacing:2px;background:linear-gradient(135deg,#0ff 0%,#a040ff 50%,#ff2060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 30px #0ff3);line-height:1.1}
+.logo-sub{font-size:13px;color:#fff3;margin-top:10px;letter-spacing:1px;font-weight:500}
+.logo-tags{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.logo-tag{display:inline-flex;align-items:center;gap:6px;font-size:9px;font-weight:700;letter-spacing:2px;padding:4px 12px;border:1px solid #fff15;background:#fff05;border-radius:4px}
+.logo-tag .dot{width:5px;height:5px;border-radius:50%;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* API status badges on start */
+.api-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.api-badge{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid #fff0a;background:#fff04;border-radius:6px;font-size:9px;font-weight:600;letter-spacing:1px;color:#fff5}
+.api-badge .api-dot{width:6px;height:6px;border-radius:50%;background:#444}
+.api-badge .api-dot.live{background:#00ff88;box-shadow:0 0 6px #00ff88}
+.api-badge .api-dot.fail{background:#ff2060}
+
+.keys-row{display:flex;gap:16px;justify-content:center;margin-top:24px;flex-wrap:wrap}
+.key-g{text-align:center}
+.key-g .k{display:inline-block;width:36px;height:36px;line-height:36px;text-align:center;border:1px solid #fff15;border-radius:6px;font-family:'Oxanium';font-weight:700;font-size:13px;color:#fff6;background:#fff05;margin:0 1px}
+.key-g .kl{display:block;font-size:9px;color:#fff3;margin-top:4px;letter-spacing:1px;font-weight:600}
+
+/* Live CVE Ticker */
+.cve-ticker{max-width:500px;width:100%;margin-top:20px;border:1px solid #fff0a;border-radius:8px;background:#fff04;overflow:hidden}
+.cve-ticker-head{padding:8px 14px;border-bottom:1px solid #fff08;display:flex;align-items:center;gap:6px}
+.cve-ticker-head .live-dot{width:6px;height:6px;border-radius:50%;background:#ff2060;animation:pulse 1s infinite}
+.cve-ticker-head span{font-size:9px;font-weight:700;letter-spacing:2px;color:#ff2060}
+.cve-list{max-height:120px;overflow-y:auto;padding:6px 0}
+.cve-list::-webkit-scrollbar{width:2px}
+.cve-list::-webkit-scrollbar-thumb{background:#fff2;border-radius:2px}
+.cve-item{padding:5px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid #fff05}
+.cve-item:last-child{border:none}
+.cve-id{font-family:'Oxanium';font-weight:700;font-size:10px;color:#0ff;white-space:nowrap}
+.cve-desc{font-size:9px;color:#fff5;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.cve-score{font-family:'Oxanium';font-weight:800;font-size:10px;padding:2px 6px;border-radius:3px;white-space:nowrap}
+.cve-score.crit{color:#ff2060;background:#ff206015;border:1px solid #ff206033}
+.cve-score.high{color:#ff6020;background:#ff602015;border:1px solid #ff602033}
+.cve-score.med{color:#ffcc00;background:#ffcc0015;border:1px solid #ffcc0033}
+.cve-loading{padding:12px;text-align:center;font-size:10px;color:#fff3}
+
+/* AI BRIEFING */
+#ai-brief{position:fixed;inset:0;z-index:110;display:none;align-items:center;justify-content:center;background:rgba(4,6,10,0.92);backdrop-filter:blur(8px)}
+#ai-brief.on{display:flex}
+.ai-panel{max-width:520px;width:92%;background:#0a0e16;border:1px solid #fff12;border-radius:12px;overflow:hidden;max-height:85vh;display:flex;flex-direction:column}
+.ai-panel-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #fff0a;background:#fff04;flex-shrink:0}
+.ai-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0ff,#a040ff);display:flex;align-items:center;justify-content:center;font-family:'Oxanium';font-weight:800;font-size:12px;color:#04060a;flex-shrink:0}
+.ai-name{font-family:'Oxanium';font-weight:700;font-size:14px;color:#fff}
+.ai-role{font-size:9px;color:#fff4;letter-spacing:2px;font-weight:600}
+.ai-typing{display:flex;align-items:center;gap:3px;padding:0 4px}
+.ai-typing span{width:4px;height:4px;border-radius:50%;background:#0ff;animation:typeDot 1s infinite}
+.ai-typing span:nth-child(2){animation-delay:0.15s}
+.ai-typing span:nth-child(3){animation-delay:0.3s}
+@keyframes typeDot{0%,100%{opacity:0.2;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}}
+.ai-panel-body{padding:16px 18px;overflow-y:auto;flex:1}
+.ai-panel-body::-webkit-scrollbar{width:3px}
+.ai-panel-body::-webkit-scrollbar-thumb{background:#fff2;border-radius:2px}
+.ai-msg{font-size:12px;color:#fffc;line-height:1.8;font-weight:500;white-space:pre-wrap}
+.ai-msg strong{color:#0ff;font-weight:700}
+.brief-wave-tag{font-family:'Oxanium';font-weight:800;font-size:10px;letter-spacing:3px;color:#fff3;margin-bottom:10px}
+.brief-threat-row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.brief-chip{display:flex;align-items:center;gap:5px;padding:3px 10px;border:1px solid #fff12;border-radius:4px;font-size:10px;font-weight:600;color:#fffa;background:#fff05}
+.brief-chip .dot{width:6px;height:6px;border-radius:50%}
+.brief-chip .new-tag{font-size:8px;color:#ff2060;letter-spacing:1px;font-weight:700}
+.ai-panel-foot{padding:12px 18px;border-top:1px solid #fff0a;display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+.ai-panel-foot .btn{padding:10px 28px;font-size:13px}
+
+/* ---- TRIVIA BONUS ROUND ---- */
+#trivia-panel{position:fixed;inset:0;z-index:115;display:none;align-items:center;justify-content:center;background:rgba(4,6,10,0.94);backdrop-filter:blur(10px)}
+#trivia-panel.on{display:flex}
+.trivia-box{max-width:500px;width:92%;background:#0a0e16;border:1px solid #ffcc0033;border-radius:12px;overflow:hidden}
+.trivia-head{padding:14px 18px;border-bottom:1px solid #fff0a;background:linear-gradient(135deg,#ffcc0008,#ff602008);display:flex;align-items:center;gap:10px}
+.trivia-icon{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#ffcc00,#ff6020);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.trivia-title{font-family:'Oxanium';font-weight:700;font-size:15px;color:#ffcc00}
+.trivia-sub{font-size:9px;color:#fff4;letter-spacing:2px;font-weight:600}
+.trivia-body{padding:18px}
+.trivia-q{font-size:13px;color:#fffc;line-height:1.7;font-weight:600;margin-bottom:14px;min-height:40px}
+.trivia-opts{display:flex;flex-direction:column;gap:8px}
+.trivia-opt{padding:10px 14px;border:1px solid #fff15;border-radius:6px;background:#fff05;font-size:12px;font-weight:600;color:#fffa;cursor:pointer;transition:all 0.12s;text-align:left}
+.trivia-opt:hover{border-color:#ffcc00;background:#ffcc0012;color:#ffcc00}
+.trivia-opt.correct{border-color:#00ff88;background:#00ff8820;color:#00ff88;animation:optFlash 0.5s}
+.trivia-opt.wrong{border-color:#ff2060;background:#ff206020;color:#ff2060}
+.trivia-opt.disabled{pointer-events:none;opacity:0.5}
+.trivia-opt.reveal{border-color:#00ff8866;background:#00ff8810;color:#00ff88aa}
+@keyframes optFlash{0%{box-shadow:0 0 0 0 #00ff8844}50%{box-shadow:0 0 20px 4px #00ff8844}100%{box-shadow:0 0 0 0 #00ff8800}}
+.trivia-result{margin-top:12px;padding:10px 14px;border-radius:6px;font-size:11px;font-weight:600;line-height:1.6;display:none}
+.trivia-result.correct-r{display:block;background:#00ff8812;border:1px solid #00ff8833;color:#00ff88}
+.trivia-result.wrong-r{display:block;background:#ff206012;border:1px solid #ff206033;color:#ff2060}
+.trivia-timer{height:3px;background:#fff08;border-radius:2px;margin-top:14px;overflow:hidden}
+.trivia-timer-fill{height:100%;background:linear-gradient(90deg,#ffcc00,#ff6020);border-radius:2px;transition:width 0.1s linear}
+.trivia-foot{padding:12px 18px;border-top:1px solid #fff0a;display:flex;justify-content:flex-end}
+.trivia-source{font-size:8px;color:#fff2;letter-spacing:1px;padding:8px 18px;border-top:1px solid #fff05}
+
+/* Game Over */
+#go-scr{background:radial-gradient(ellipse at 50% 40%,#1a0a1a 0%,var(--bg) 55%);overflow-y:auto;padding:30px 16px}
+.go-t{font-family:'Oxanium';font-size:38px;font-weight:800;background:linear-gradient(135deg,#ff2060,#ff6020);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px;margin-bottom:4px}
+.go-sub{font-size:11px;color:#fff3;letter-spacing:2px;margin-bottom:4px;font-weight:500}
+.go-hs{font-size:13px;font-weight:700;color:#ffcc00;letter-spacing:2px;margin-bottom:10px}.go-hs.hide{display:none}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 20px;margin:16px 0}
+.st{text-align:center;padding:8px;background:#fff04;border-radius:6px;border:1px solid #fff08}
+.st .sl{font-size:8px;color:#fff3;letter-spacing:2px;text-transform:uppercase;font-weight:600}
+.st .sv{font-family:'Oxanium';font-weight:800;font-size:22px;color:#fff}
+.name-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.name-row label{font-size:11px;color:#fff4;letter-spacing:2px;font-weight:600}
+.name-input{font-family:'Oxanium';font-size:16px;font-weight:700;background:#fff08;border:1px solid #fff15;color:#fff;padding:8px 16px;width:180px;text-align:center;letter-spacing:3px;outline:none;border-radius:4px;text-transform:uppercase}
+.name-input:focus{border-color:#0ff;box-shadow:0 0 15px #0ff15}
+.name-input::placeholder{color:#fff2;font-weight:400}
+.ai-debrief{max-width:440px;width:100%;background:#fff05;border:1px solid #fff0a;border-radius:10px;padding:16px 18px;margin:14px 0;text-align:left}
+.ai-debrief-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.ai-debrief .ai-msg{font-size:11px;line-height:1.7}
+
+#share-toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:200;font-size:12px;font-weight:600;color:#00ff88;background:#00ff8815;border:1px solid #00ff8833;padding:8px 24px;border-radius:6px;opacity:0;transition:opacity 0.2s;pointer-events:none}
+#share-toast.on{opacity:1}
+
+.kf{position:fixed;z-index:25;pointer-events:none;max-width:210px;padding:6px 10px;border-left:2px solid #0ff;background:rgba(4,6,10,0.9);border-radius:0 4px 4px 0;font-size:9px;color:#fffa;line-height:1.5;font-weight:500;animation:kfS 2.8s ease-out forwards;backdrop-filter:blur(4px)}
+.kf .kft{font-size:7px;color:#0ff8;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:2px}
+@keyframes kfS{0%{opacity:0;transform:translateY(8px)}8%{opacity:1;transform:translateY(0)}72%{opacity:1}100%{opacity:0;transform:translateY(-18px)}}
+.sp{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);z-index:26;pointer-events:none;font-family:'Oxanium';font-weight:800;font-size:28px;letter-spacing:4px;text-align:center;animation:spA 1.8s ease-out forwards}
+@keyframes spA{0%{opacity:0;transform:translate(-50%,-50%) scale(0.5)}8%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}16%{transform:translate(-50%,-50%) scale(1)}78%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) translateY(-40px)}}
+.sc-pop{position:fixed;z-index:24;pointer-events:none;font-family:'Oxanium';font-weight:800;font-size:14px;animation:scP 0.9s ease-out forwards}
+@keyframes scP{0%{opacity:0;transform:translateY(0) scale(0.7)}10%{opacity:1;transform:translateY(-5px) scale(1.1)}30%{transform:translateY(-12px) scale(1)}100%{opacity:0;transform:translateY(-35px)}}
+#dmg-v{position:fixed;inset:0;z-index:15;pointer-events:none;opacity:0;transition:opacity 0.08s;background:radial-gradient(ellipse at center,transparent 50%,#ff206033 100%)}
+#dmg-v.on{opacity:1}
+#w-pop{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:25;pointer-events:none;text-align:center;opacity:0}
+#w-pop.on{opacity:1;animation:wP 2.8s ease-out forwards}
+#w-pop .wn{font-family:'Oxanium';font-size:56px;font-weight:800;background:linear-gradient(135deg,#0ff,#a040ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:6px;filter:drop-shadow(0 0 20px #0ff4)}
+#w-pop .ws{font-size:12px;color:#fff4;letter-spacing:4px;margin-top:4px;font-weight:600}
+@keyframes wP{0%{opacity:0;transform:translate(-50%,-50%) scale(0.6)}8%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}16%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0}}
+#boss-bar{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:22;pointer-events:none;text-align:center;display:none;width:300px}
+#boss-bar .bb-name{font-family:'Oxanium';font-size:12px;font-weight:700;letter-spacing:3px;margin-bottom:4px}
+#boss-bar .bb-track{height:6px;background:#fff0a;border-radius:3px;overflow:hidden}
+#boss-bar .bb-fill{height:100%;border-radius:3px;transition:width 0.15s}
+
+/* Codex */
+#codex-scr{background:rgba(4,6,10,0.97);padding:24px;overflow-y:auto;backdrop-filter:blur(4px)}
+.cx-title{font-family:'Oxanium';font-size:22px;font-weight:800;background:linear-gradient(90deg,#0ff,#a040ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:2px}
+.cx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;max-width:900px;width:100%;margin:14px 0}
+.cx-card{border:1px solid #fff0a;background:#fff05;border-radius:8px;padding:14px;opacity:0.2;transition:all 0.3s}
+.cx-card.on{opacity:1;border-color:#fff15}
+.cx-cn{font-family:'Oxanium';font-weight:700;font-size:14px}
+.cx-cat{font-size:8px;letter-spacing:1px;opacity:0.4;font-weight:600}
+.cx-card p{font-size:10px;color:#fff6;line-height:1.7;margin-top:6px;font-weight:500}
+.cx-card .rw{margin-top:8px;padding-top:8px;border-top:1px solid #fff08;font-size:10px;color:#ffcc00a0;line-height:1.7;font-weight:500}
+.cx-card .df{margin-top:4px;font-size:10px;color:#0ff8;line-height:1.7;font-weight:500}
+.ai-chat-box{margin-top:10px;border:1px solid #fff0a;border-radius:6px;overflow:hidden}
+.ai-chat-input-row{display:flex;border-top:1px solid #fff08}
+.ai-chat-input{flex:1;background:transparent;border:none;color:#fff;font-family:'Rajdhani';font-size:12px;padding:8px 12px;outline:none;font-weight:500}
+.ai-chat-input::placeholder{color:#fff3}
+.ai-chat-send{background:transparent;border:none;border-left:1px solid #fff08;color:#0ff;font-family:'Rajdhani';font-weight:700;font-size:11px;padding:8px 14px;cursor:pointer;letter-spacing:1px}
+.ai-chat-send:hover{background:#0ff12}
+.ai-chat-resp{padding:10px 12px;font-size:10px;color:#fffc;line-height:1.7;font-weight:500;max-height:140px;overflow-y:auto;white-space:pre-wrap;display:none}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="dmg-v"></div>
+
+<div id="hud">
+  <div class="hud-r">
+    <div class="hud-b">
+      <div class="hud-t">Shield</div>
+      <div class="hud-v" id="hp-n">100</div>
+      <div class="bar"><div class="bar-f hp-f" id="hp-b" style="width:100%"></div></div>
+      <div style="height:5px"></div>
+      <div class="hud-t">Energy</div>
+      <div class="bar" style="width:120px"><div class="bar-f en-f" id="en-b" style="width:100%"></div></div>
+    </div>
+    <div class="hud-b c"><div class="wave-tag" id="w-tag">WAVE 1</div><div id="combo-h">×1</div><div id="streak-h"></div></div>
+    <div class="hud-b r"><div class="hud-t">Score</div><div class="hud-sc" id="sc-n">0</div><div class="hud-t" style="margin-top:3px">Best <span id="hs-n" style="color:#ffcc00">0</span></div></div>
+  </div>
+</div>
+
+<div id="w-pop"><div class="wn" id="wp-n"></div><div class="ws" id="wp-s"></div></div>
+<div id="boss-bar"><div class="bb-name" id="bb-name"></div><div class="bb-track"><div class="bb-fill" id="bb-fill"></div></div></div>
+<div id="share-toast">Copied to clipboard!</div>
+
+<!-- AI BRIEFING -->
+<div id="ai-brief">
+  <div class="ai-panel">
+    <div class="ai-panel-head">
+      <div class="ai-avatar">AI</div>
+      <div><div class="ai-name">SENTINEL</div><div class="ai-role">AI SECURITY ANALYST</div></div>
+    </div>
+    <div class="ai-panel-body">
+      <div class="brief-wave-tag" id="brief-wave-tag"></div>
+      <div class="brief-threat-row" id="brief-threats"></div>
+      <div class="ai-msg" id="brief-msg"><div class="ai-typing"><span></span><span></span><span></span></div></div>
+    </div>
+    <div class="ai-panel-foot">
+      <button class="btn pri" id="brief-go-btn" onclick="G.nextWave()" disabled>Analyzing...</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRIVIA BONUS ROUND -->
+<div id="trivia-panel">
+  <div class="trivia-box">
+    <div class="trivia-head">
+      <div class="trivia-icon">🧠</div>
+      <div><div class="trivia-title">BONUS ROUND</div><div class="trivia-sub">ANSWER CORRECTLY FOR REWARDS</div></div>
+    </div>
+    <div class="trivia-body">
+      <div class="trivia-q" id="triv-q">Loading question...</div>
+      <div class="trivia-opts" id="triv-opts"></div>
+      <div class="trivia-result" id="triv-result"></div>
+      <div class="trivia-timer"><div class="trivia-timer-fill" id="triv-timer" style="width:100%"></div></div>
+    </div>
+    <div class="trivia-foot">
+      <button class="btn pri" id="triv-continue" onclick="G.triviaNext()" style="display:none">Continue →</button>
+    </div>
+    <div class="trivia-source">Powered by Open Trivia Database (opentdb.com) — CC BY-SA 4.0</div>
+  </div>
+</div>
+
+<!-- START -->
+<div class="ov" id="start-scr">
+  <div class="logo">
+    <div class="logo-pre">CYBER DEFENSE ARCADE</div>
+    <div class="logo-main">THREAT HUNTER</div>
+    <div class="logo-sub">How long can you survive the kill chain?</div>
+    <div class="logo-tags">
+      <div class="logo-tag" style="color:#0ff;border-color:#0ff33"><span class="dot" style="background:#0ff;box-shadow:0 0 6px #0ff"></span> AI INTEL BRIEFINGS</div>
+      <div class="logo-tag" style="color:#ffcc00;border-color:#ffcc0033"><span class="dot" style="background:#ffcc00;box-shadow:0 0 6px #ffcc00"></span> TRIVIA BONUS ROUNDS</div>
+      <div class="logo-tag" style="color:#ff2060;border-color:#ff206033"><span class="dot" style="background:#ff2060;box-shadow:0 0 6px #ff2060"></span> LIVE CVE FEED</div>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn pri" onclick="startGame()">Start Hunting</button>
+    <button class="btn" onclick="showCodex()">Threat Intel</button>
+  </div>
+  <div class="keys-row">
+    <div class="key-g"><div><span class="k">W</span></div><div><span class="k">A</span><span class="k">S</span><span class="k">D</span></div><div class="kl">Move</div></div>
+    <div class="key-g"><div class="k" style="width:70px">SPACE</div><div class="kl">Fire</div></div>
+    <div class="key-g"><div class="k" style="width:56px">SHIFT</div><div class="kl">Dash</div></div>
+    <div class="key-g"><div class="k">E</div><div class="kl">EMP</div></div>
+  </div>
+  <!-- API Status -->
+  <div class="api-row" id="api-row">
+    <div class="api-badge"><div class="api-dot" id="api-ai"></div>Anthropic AI</div>
+    <div class="api-badge"><div class="api-dot" id="api-trivia"></div>Open Trivia DB</div>
+    <div class="api-badge"><div class="api-dot" id="api-cve"></div>CVE Intel Feed</div>
+  </div>
+  <!-- Live CVE Ticker -->
+  <div class="cve-ticker" id="cve-ticker">
+    <div class="cve-ticker-head"><div class="live-dot"></div><span>LIVE VULNERABILITY FEED</span></div>
+    <div class="cve-list" id="cve-list"><div class="cve-loading">Fetching latest CVEs...</div></div>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div class="ov hide" id="go-scr">
+  <div class="go-t">SYSTEM BREACH</div>
+  <div class="go-sub" id="go-sub"></div>
+  <div class="go-hs hide" id="go-hs">★ NEW HIGH SCORE ★</div>
+  <div class="stats" id="go-stats"></div>
+  <div class="ai-debrief" id="ai-debrief">
+    <div class="ai-debrief-head">
+      <div class="ai-avatar" style="width:26px;height:26px;font-size:10px">AI</div>
+      <div><span style="font-family:'Oxanium';font-weight:700;font-size:12px">SENTINEL</span> <span style="font-size:9px;color:#fff4;letter-spacing:1px">POST-INCIDENT ANALYSIS</span></div>
+    </div>
+    <div class="ai-msg" id="ai-debrief-msg"><div class="ai-typing"><span></span><span></span><span></span></div></div>
+  </div>
+  <div class="name-row"><label>CALL SIGN:</label><input class="name-input" id="name-in" placeholder="AGENT" maxlength="12" spellcheck="false" autocomplete="off"></div>
+  <div class="btn-row">
+    <button class="btn pri" onclick="startGame()">Retry</button>
+    <button class="btn share" onclick="shareResult()">Share Score</button>
+    <button class="btn" onclick="showCodex()">Threat Intel</button>
+  </div>
+</div>
+
+<!-- CODEX -->
+<div class="ov hide" id="codex-scr">
+  <div style="text-align:center"><div class="cx-title">THREAT CODEX</div><div style="font-size:10px;color:#fff3;font-weight:600" id="cx-prog"></div></div>
+  <div class="cx-grid" id="cx-grid"></div>
+  <button class="btn" onclick="hideCodex()">Close</button>
+</div>
+
+<script>
+const CV=document.getElementById('game'),X=CV.getContext('2d');
+let W,H;function resize(){W=CV.width=innerWidth;H=CV.height=innerHeight}resize();addEventListener('resize',resize);
+
+// ============================================================
+//  API INTEGRATIONS
+// ============================================================
+
+// ---- 1. ANTHROPIC AI (SENTINEL) ----
+async function askAI(sys, msg) {
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,system:sys,messages:[{role:"user",content:msg}]})
+    });
+    const d = await r.json();
+    setAPI('api-ai',true);
+    return d.content?.[0]?.text || "Signal lost. Proceed with caution.";
+  } catch(e) { setAPI('api-ai',false); return "Comms disrupted. Proceed on instinct, operator."; }
+}
+
+const AI_SYS = `You are SENTINEL, an AI security analyst in a cybersecurity arcade game called THREAT HUNTER. You brief players between waves and debrief after defeat.
+Personality: sharp, tactical, intense but encouraging. Like a mission handler in a spy thriller.
+RULES:
+- 3-4 short paragraphs MAX. Players want to return to action.
+- Use REAL cybersecurity knowledge: CVEs, MITRE ATT&CK, real incidents.
+- Bold important terms with **double asterisks**
+- No bullet points/lists. Natural tactical speech.
+- Reference the SPECIFIC threats being faced.
+- End briefings with a punchy one-liner.
+- For debriefs, give one real cybersecurity lesson related to what killed them.`;
+
+// ---- 2. OPEN TRIVIA DB ----
+let triviaCache = [];
+async function fetchTrivia() {
+  try {
+    // Category 18 = Science: Computers
+    const r = await fetch("https://opentdb.com/api.php?amount=10&category=18&type=multiple&encode=url3986");
+    const d = await r.json();
+    if (d.response_code === 0) {
+      triviaCache = d.results.map(q => ({
+        question: decodeURIComponent(q.question),
+        correct: decodeURIComponent(q.correct_answer),
+        wrong: q.incorrect_answers.map(a => decodeURIComponent(a)),
+        difficulty: q.difficulty
+      }));
+      setAPI('api-trivia', true);
+    }
+  } catch(e) { setAPI('api-trivia', false); }
+}
+fetchTrivia(); // Pre-fetch on load
+
+function getTrivia() {
+  if (!triviaCache.length) return null;
+  const q = triviaCache.shift();
+  if (triviaCache.length < 3) fetchTrivia(); // Refill
+  return q;
+}
+
+// ---- 3. CVE FEED (NVD NIST API — no key needed) ----
+let cveData = [];
+async function fetchCVEs() {
+  try {
+    // Fetch recent high-severity CVEs from NVD
+    const r = await fetch("https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=8&cvssV3Severity=HIGH");
+    const d = await r.json();
+    if (d.vulnerabilities) {
+      cveData = d.vulnerabilities.map(v => {
+        const cve = v.cve;
+        const desc = cve.descriptions?.find(d => d.lang === 'en')?.value || 'No description';
+        const metrics = cve.metrics?.cvssMetricV31?.[0]?.cvssData || cve.metrics?.cvssMetricV30?.[0]?.cvssData;
+        const score = metrics?.baseScore || 0;
+        return { id: cve.id, desc: desc.substring(0, 120), score };
+      });
+      setAPI('api-cve', true);
+      renderCVEs();
+    }
+  } catch(e) {
+    // Fallback: use hardcoded recent CVEs
+    cveData = [
+      {id:'CVE-2024-3400',desc:'PAN-OS GlobalProtect command injection allowing unauthenticated RCE',score:10.0},
+      {id:'CVE-2024-21887',desc:'Ivanti Connect Secure command injection via web component',score:9.1},
+      {id:'CVE-2023-44228',desc:'Apache Log4j2 JNDI injection allowing remote code execution',score:10.0},
+      {id:'CVE-2024-1709',desc:'ConnectWise ScreenConnect authentication bypass',score:10.0},
+      {id:'CVE-2023-22527',desc:'Atlassian Confluence template injection RCE',score:9.8},
+      {id:'CVE-2025-1094',desc:'PostgreSQL SQL injection via quoting APIs',score:8.1},
+    ];
+    setAPI('api-cve', false);
+    renderCVEs();
+  }
+}
+fetchCVEs();
+
+function renderCVEs() {
+  const el = document.getElementById('cve-list');
+  if (!cveData.length) { el.innerHTML = '<div class="cve-loading">No data available</div>'; return; }
+  el.innerHTML = cveData.map(c => {
+    const cls = c.score >= 9 ? 'crit' : c.score >= 7 ? 'high' : 'med';
+    return `<div class="cve-item"><div class="cve-id">${c.id}</div><div class="cve-desc">${c.desc}</div><div class="cve-score ${cls}">${c.score.toFixed(1)}</div></div>`;
+  }).join('');
+}
+
+function setAPI(id, ok) {
+  const el = document.getElementById(id);
+  if (el) { el.className = 'api-dot ' + (ok ? 'live' : 'fail'); }
+}
+
+function formatAI(t) { return t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); }
+
+// ============================================================
+//  AUDIO
+// ============================================================
+const Snd=(()=>{let c;function i(){if(!c)c=new(AudioContext||webkitAudioContext)()}
+function p(f,d,t='square',v=0.05){if(!c)return;try{const o=c.createOscillator(),g=c.createGain();o.type=t;o.frequency.value=f;g.gain.value=v;g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+d);o.connect(g).connect(c.destination);o.start();o.stop(c.currentTime+d)}catch(e){}}
+return{i,shoot(){p(900,0.03,'square',0.025)},hit(){p(180,0.06,'sawtooth',0.035)},kill(){p(500,0.1,'square',0.03);setTimeout(()=>p(700,0.06,'sine',0.025),40)},dash(){p(300,0.05,'sine',0.03)},hurt(){p(80,0.15,'sawtooth',0.05)},pu(){p(523,0.07,'sine',0.03);setTimeout(()=>p(659,0.07,'sine',0.03),50);setTimeout(()=>p(784,0.09,'sine',0.04),100)},boss(){p(60,0.35,'sawtooth',0.05)},emp(){p(200,0.12,'sine',0.04)},streak(){p(880,0.08,'sine',0.035)},orb(){p(1200,0.03,'sine',0.015)},
+  correct(){p(523,0.1,'sine',0.04);setTimeout(()=>p(659,0.08,'sine',0.035),80);setTimeout(()=>p(784,0.12,'sine',0.04),160)},
+  wrong(){p(200,0.15,'sawtooth',0.04);setTimeout(()=>p(150,0.15,'sawtooth',0.03),100)},
+}})();
+
+// ============================================================
+//  THREAT DATABASE
+// ============================================================
+const T={
+  phishing:{n:'Phishing',c:'#44bbff',sz:12,hp:1,sc:80,sp:1.4,sh:'env',cat:'Social Engineering',desc:'Deceptive messages that trick users into revealing credentials.',real:'2020 Twitter hack via phone spear phishing.',def:'Verify senders, hover over links, enable MFA.',facts:['91% of cyberattacks begin with phishing','Spear phishing uses OSINT to target individuals','BEC caused $2.7B in losses in 2022','Vishing and smishing bypass email filters','Whaling targets C-level executives','Homograph attacks use lookalike Unicode in URLs'],shoots:false},
+  trojan:{n:'Trojan',c:'#ff6040',sz:14,hp:1,sc:100,sp:1.1,sh:'dia',cat:'Malware',desc:'Disguised as legitimate software. Relies on deception.',real:'Emotet spread via malicious Word docs.',def:'Verify sources, use application whitelisting.',facts:['Trojans are ~58% of all malware','RATs give full machine control','Often disguised as invoices','Banking trojans steal financial data','Dropper trojans deliver other payloads','Named after the Greek myth'],shoots:false},
+  worm:{n:'Worm',c:'#ff9920',sz:11,hp:1,sc:120,sp:1.8,sh:'wrm',cat:'Malware',desc:'Self-replicating malware spreading without user interaction.',real:'WannaCry exploited EternalBlue across 150+ countries.',def:'Patch management and network segmentation.',facts:['Morris Worm (1988) was the first internet worm','Worms don\'t need a host program','Stuxnet used 4 zero-days','Conficker hit 9-15 million computers','Code Red hit 359K hosts in 14 hours','Worms spread via USB, email, unpatched services'],shoots:false},
+  ddos:{n:'DDoS Bot',c:'#ffdd00',sz:8,hp:1,sc:50,sp:2.6,sh:'bolt',cat:'Network Attack',desc:'Botnet nodes flooding targets to crash services.',real:'Mirai enslaved 600K+ IoT devices.',def:'CDN/DDoS mitigation, rate limiting.',facts:['IoT default passwords are prime targets','DDoS-for-hire: $10/hour','Largest DDoS peaked at 5.6 Tbps','DDoS often a smokescreen','Amplification multiplies traffic 50x+','Slowloris exhausts connections'],shoots:false},
+  rootkit:{n:'Rootkit',c:'#aa44ff',sz:16,hp:2,sc:250,sp:0.95,sh:'ghost',cat:'Persistence',desc:'Hides in the OS for persistent undetected access.',real:'Sony BMG rootkits on music CDs (2005).',def:'Secure Boot, kernel monitoring, Volatility.',facts:['Kernel-mode rootkits run at OS level','UEFI rootkits survive reinstallation','They hook system calls to hide','Memory forensics beats disk scans','Bootkits infect the MBR','LoJax: first UEFI rootkit in wild'],shoots:true,shootRate:180,bulletSpeed:2.5,bulletColor:'#aa44ff'},
+  ransomware:{n:'Ransomware',c:'#ff2060',sz:20,hp:3,sc:300,sp:0.75,sh:'lock',cat:'Malware',desc:'Encrypts files, demands crypto. Double extortion steals data too.',real:'Colonial Pipeline shutdown (2021).',def:'3-2-1 backups, segmentation, EDR.',facts:['Avg payment >$500K in 2024','RaaS lets anyone launch attacks','3-2-1: 3 copies, 2 media, 1 offsite','LockBit most active in 2023','Triple extortion adds DDoS','Healthcare is #1 target'],shoots:true,shootRate:140,bulletSpeed:3,bulletColor:'#ff2060'},
+  apt:{n:'APT Agent',c:'#ff0088',sz:24,hp:10,sc:800,sp:0.55,sh:'apt',cat:'Advanced Threat',boss:true,desc:'Nation-state long-term intrusions with custom malware.',real:'APT29 SolarWinds supply chain (2020).',def:'Threat hunting, zero-trust, supply chain audits.',facts:['APT28, Lazarus, APT41 are major groups','They abuse PowerShell to hide','Dwell time: 10 days avg in 2024','MITRE ATT&CK maps techniques','Supply chain attacks hit trusted updates','APTs maintain access for months'],shoots:true,shootRate:80,bulletSpeed:3.5,bulletColor:'#ff0088',pattern:'spread'},
+  zeroday:{n:'Zero-Day',c:'#ff0040',sz:28,hp:16,sc:1200,sp:0.4,sh:'skull',cat:'Advanced Threat',boss:true,desc:'Exploits unknown vulns. Zero days to prepare.',real:'Log4Shell (CVE-2021-44228) hit millions.',def:'Defense-in-depth: WAF, behavioral detection, assume-breach.',facts:['Zero-days sell for $500K-$2.5M','Nations stockpile for intel ops','Google bounty: $50M+ paid total','Pegasus: zero-click exploit','Avg 7 years undetected','Chrome: 8 exploited zero-days in 2024'],shoots:true,shootRate:50,bulletSpeed:4,bulletColor:'#ff0040',pattern:'ring'},
+};
+
+const WNAMES=['Phishing Wave','Network Breach','Stealth Ops','Ransomware Strike','Full Assault','Escalation','Red Alert','Critical Mass','Meltdown','Armageddon'];
+function wCfg(n){const pool=['phishing','trojan'];if(n>=2)pool.push('worm','ddos');if(n>=3)pool.push('rootkit');if(n>=4)pool.push('ransomware');if(n>=6)pool.push('ddos','worm');const bosses=[];if(n%5===0)bosses.push(n<10?'apt':'zeroday');if(n%10===0)bosses.push('apt','zeroday');return{pool,bosses,count:Math.min(8+n*3,80),spMul:1+(n-1)*0.035,isBoss:bosses.length>0}}
+
+// ============================================================
+//  STATE
+// ============================================================
+let g={};
+function reset(){g={on:false,tick:0,dt:1,slowT:0,score:0,hi:+localStorage.getItem('thHS4')||0,wave:0,kills:0,maxC:0,combo:0,comboT:0,streak:0,streakT:0,bestSt:0,triviaCorrect:0,triviaTotal:0,unlocked:JSON.parse(localStorage.getItem('thCX4')||'[]'),factsUsed:new Set(),name:localStorage.getItem('thN3')||'',p:null,bul:[],eBul:[],en:[],pt:[],pups:[],orbs:[],bg:{rain:[],sA:[],sB:[]},spQ:[],spT:0,bossHP:0,bossMHP:0,sx:0,sy:0,sT:0,sM:0,wCD:0,intensity:0,trail:[],killedBy:'',threatsRun:[]}}
+reset();
+
+const keys={};
+addEventListener('keydown',e=>{keys[e.code]=true;['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)&&e.preventDefault()});
+addEventListener('keyup',e=>keys[e.code]=false);
+document.addEventListener('click',()=>Snd.i(),{once:true});
+document.addEventListener('keydown',()=>Snd.i(),{once:true});
+
+function mkP(){return{x:W/2,y:H-80,hp:100,mhp:100,en:100,men:100,fcd:0,fr:8,inv:0,dcd:0,dash:false,dt:0,ddx:0,ddy:0,wep:'single',wepT:0,empCD:0}}
+
+// ============================================================
+//  BACKGROUND
+// ============================================================
+function initBG(){const b=g.bg;b.rain=[];b.sA=[];b.sB=[];for(let i=0;i<35;i++)b.rain.push({x:Math.random()*W,y:Math.random()*H,c:String.fromCharCode(33+~~(Math.random()*90)),sp:0.1+Math.random()*0.3,a:0.008+Math.random()*0.02,sz:7+Math.random()*3,cd:Math.random()*300});for(let i=0;i<40;i++)b.sA.push({x:Math.random()*W,y:Math.random()*H,s:0.3+Math.random()*0.5,sp:0.08+Math.random()*0.1,a:0.15+Math.random()*0.15});for(let i=0;i<25;i++)b.sB.push({x:Math.random()*W,y:Math.random()*H,s:0.6+Math.random()*1,sp:0.2+Math.random()*0.15,a:0.2+Math.random()*0.25})}
+
+function drawBG(){const r=4+g.intensity*8,gc=6+g.intensity*2,b=10+g.intensity*8;X.fillStyle=`rgb(${~~r},${~~gc},${~~b})`;X.fillRect(0,0,W,H);if(g.p){const gr=X.createRadialGradient(g.p.x,g.p.y,0,g.p.x,g.p.y,200+g.intensity*100);gr.addColorStop(0,`rgba(0,255,255,${0.015+g.intensity*0.02})`);gr.addColorStop(1,'transparent');X.fillStyle=gr;X.fillRect(0,0,W,H)}const bg=g.bg;bg.rain.forEach(c=>{c.y+=c.sp;c.cd--;if(c.cd<=0){c.c=String.fromCharCode(33+~~(Math.random()*90));c.cd=100+Math.random()*200}if(c.y>H+6){c.y=-6;c.x=Math.random()*W}X.fillStyle=`rgba(0,255,255,${c.a})`;X.font=`${c.sz}px monospace`;X.fillText(c.c,c.x,c.y)});bg.sA.forEach(s=>{s.y+=s.sp;if(s.y>H){s.y=0;s.x=Math.random()*W}X.globalAlpha=s.a;X.fillStyle='#0ff';X.fillRect(s.x,s.y,s.s,s.s);X.globalAlpha=1});bg.sB.forEach(s=>{s.y+=s.sp;if(s.y>H){s.y=0;s.x=Math.random()*W}X.globalAlpha=s.a;X.fillStyle='#a040ff';X.fillRect(s.x,s.y,s.s,s.s);X.globalAlpha=1})}
+
+// ============================================================
+//  DRAW FUNCTIONS (compact)
+// ============================================================
+function drawTrail(){for(let i=0;i<g.trail.length;i++){const t=g.trail[i],a=t.life/t.ml;X.globalAlpha=a*0.3;X.fillStyle='#0ff';X.beginPath();X.arc(t.x+g.sx,t.y+g.sy,3*a,0,Math.PI*2);X.fill();X.globalAlpha=1}}
+function drawP(){const p=g.p;if(p.inv>0&&~~(g.tick/2)%2)return;X.save();X.translate(p.x+g.sx,p.y+g.sy);X.shadowColor='#0ff';X.shadowBlur=12;X.fillStyle='#0ff';X.beginPath();X.moveTo(0,-16);X.lineTo(-4,-8);X.lineTo(-12,8);X.lineTo(-8,11);X.lineTo(-3,5);X.lineTo(0,12);X.lineTo(3,5);X.lineTo(8,11);X.lineTo(12,8);X.lineTo(4,-8);X.closePath();X.fill();X.fillStyle='#04060a';X.beginPath();X.moveTo(0,-8);X.lineTo(-3.5,3);X.lineTo(0,1);X.lineTo(3.5,3);X.closePath();X.fill();const fl=4+Math.sin(g.tick*0.5)*3;X.fillStyle='#a040ff';X.shadowColor='#a040ff';X.shadowBlur=10;X.beginPath();X.moveTo(-3,12);X.lineTo(0,12+fl);X.lineTo(3,12);X.closePath();X.fill();X.shadowBlur=0;X.restore()}
+function drawBul(b){X.fillStyle='#0ff';X.shadowColor='#0ff';X.shadowBlur=6;X.fillRect(b.x+g.sx-1.5,b.y+g.sy-5,3,10);X.shadowBlur=0}
+function drawEBul(b){X.fillStyle=b.c;X.shadowColor=b.c;X.shadowBlur=5;X.beginPath();X.arc(b.x+g.sx,b.y+g.sy,b.r||3,0,Math.PI*2);X.fill();X.shadowBlur=0}
+function drawEn(e){const t=T[e.type];X.save();X.translate(e.x+g.sx,e.y+g.sy);const pulse=1+Math.sin(g.tick*0.1+e.ph)*0.06,s=t.sz*pulse;e.rot+=e.rs*g.dt;X.strokeStyle=t.c;X.fillStyle=t.c+'12';X.lineWidth=1.5;X.shadowColor=t.c;X.shadowBlur=10;switch(t.sh){case'dia':X.save();X.rotate(e.rot);X.beginPath();X.moveTo(0,-s);X.lineTo(s,0);X.lineTo(0,s);X.lineTo(-s,0);X.closePath();X.fill();X.stroke();X.restore();break;case'wrm':for(let i=3;i>=0;i--){const ox=Math.sin(g.tick*0.06+i*0.7+e.ph)*3,oy=i*4.5,r=s*(1-i*0.14);X.fillStyle=t.c+(i===0?'30':'15');X.strokeStyle=t.c+(i===0?'aa':'50');X.beginPath();X.arc(ox,oy,r,0,Math.PI*2);X.fill();X.stroke()}break;case'lock':X.fillRect(-s*0.55,-s*0.05,s*1.1,s*0.85);X.strokeRect(-s*0.55,-s*0.05,s*1.1,s*0.85);X.lineWidth=2.2;X.beginPath();X.arc(0,-s*0.05,s*0.35,Math.PI,0);X.stroke();X.fillStyle=t.c;X.beginPath();X.arc(0,s*0.28,s*0.09,0,Math.PI*2);X.fill();break;case'env':X.save();X.rotate(Math.sin(g.tick*0.03+e.ph)*0.08);X.fillRect(-s*0.8,-s*0.4,s*1.6,s);X.strokeRect(-s*0.8,-s*0.4,s*1.6,s);X.beginPath();X.moveTo(-s*0.8,-s*0.4);X.lineTo(0,s*0.1);X.lineTo(s*0.8,-s*0.4);X.stroke();X.fillStyle=t.c;X.font=`bold ${s*0.4}px "Oxanium"`;X.textAlign='center';X.textBaseline='middle';X.fillText('@',0,s*0.1);X.restore();break;case'ghost':const ga=0.3+Math.sin(g.tick*0.04+e.ph)*0.3;X.globalAlpha=ga;X.beginPath();X.arc(0,-s*0.18,s*0.5,Math.PI,0);X.lineTo(s*0.5,s*0.3);for(let i=3;i>=-3;i--)X.lineTo(i*s*0.16,s*0.3+(i%2===0?s*0.16:0));X.closePath();X.fill();X.stroke();X.fillStyle=t.c;X.globalAlpha=ga+0.3;X.fillRect(-s*0.2,-s*0.2,s*0.1,s*0.1);X.fillRect(s*0.1,-s*0.2,s*0.1,s*0.1);X.globalAlpha=1;break;case'bolt':X.save();X.rotate(e.rot*2.5);X.fillStyle=t.c+'30';X.beginPath();X.moveTo(-s*0.1,-s*0.7);X.lineTo(s*0.22,-s*0.06);X.lineTo(s*0.03,-s*0.06);X.lineTo(s*0.1,s*0.7);X.lineTo(-s*0.22,s*0.06);X.lineTo(-s*0.03,s*0.06);X.closePath();X.fill();X.stroke();X.restore();break;case'skull':const bs=s*0.6;X.lineWidth=2;X.beginPath();X.arc(0,-bs*0.1,bs*0.6,Math.PI*0.85,Math.PI*0.15,true);X.quadraticCurveTo(bs*0.4,bs*0.4,bs*0.25,bs*0.6);X.lineTo(-bs*0.25,bs*0.6);X.quadraticCurveTo(-bs*0.4,bs*0.4,-bs*0.55,bs*0.03);X.closePath();X.fill();X.stroke();X.fillStyle='#04060a';X.beginPath();X.arc(-bs*0.18,-bs*0.03,bs*0.13,0,Math.PI*2);X.fill();X.beginPath();X.arc(bs*0.18,-bs*0.03,bs*0.13,0,Math.PI*2);X.fill();X.fillStyle=t.c;X.beginPath();X.arc(-bs*0.18,-bs*0.03,bs*0.05,0,Math.PI*2);X.fill();X.beginPath();X.arc(bs*0.18,-bs*0.03,bs*0.05,0,Math.PI*2);X.fill();break;case'apt':X.lineWidth=1.5;X.beginPath();X.arc(0,0,s*0.5,0,Math.PI*2);X.stroke();X.beginPath();X.arc(0,0,s*0.25,0,Math.PI*2);X.stroke();X.fillStyle=t.c;X.beginPath();X.arc(0,0,s*0.06,0,Math.PI*2);X.fill();const cl=s*0.75;X.save();X.rotate(e.rot*0.4);X.beginPath();X.moveTo(-cl,0);X.lineTo(-s*0.6,0);X.moveTo(s*0.6,0);X.lineTo(cl,0);X.moveTo(0,-cl);X.lineTo(0,-s*0.6);X.moveTo(0,s*0.6);X.lineTo(0,cl);X.stroke();X.restore();break}if(t.hp>1&&!t.boss){X.shadowBlur=0;const bw=s*1.3;X.fillStyle='#fff1';X.fillRect(-bw/2,-s-9,bw,3);X.fillStyle=t.c;X.fillRect(-bw/2,-s-9,bw*(e.hp/t.hp),3)}X.shadowBlur=0;X.restore()}
+function drawOrb(o){const a=0.5+Math.sin(g.tick*0.1+o.ph)*0.3;X.globalAlpha=a;X.fillStyle=o.c;X.shadowColor=o.c;X.shadowBlur=8;X.beginPath();X.arc(o.x+g.sx,o.y+g.sy,o.sz,0,Math.PI*2);X.fill();X.shadowBlur=0;X.globalAlpha=1}
+const PUS=[{id:'heal',l:'PATCH +40',c:'#00ff88',i:'+'},{id:'spread',l:'MULTI-VECTOR',c:'#0ff',i:'⫘'},{id:'rapid',l:'RAPID FIRE',c:'#ffcc00',i:'»'},{id:'shield',l:'FULL SHIELD',c:'#a040ff',i:'◆'},{id:'nuke',l:'KILLSWITCH',c:'#ff40aa',i:'✦'},{id:'slow',l:'TIME FREEZE',c:'#44ddff',i:'◎'}];
+function drawPU(p){const bob=Math.sin(p.age*0.05)*3;X.save();X.translate(p.x+g.sx,p.y+bob+g.sy);const r=11+Math.sin(p.age*0.08)*2;X.strokeStyle=p.d.c;X.shadowColor=p.d.c;X.shadowBlur=12;X.lineWidth=1.5;X.beginPath();for(let i=0;i<6;i++){const a=Math.PI/3*i+p.age*0.02;X.lineTo(r*Math.cos(a),r*Math.sin(a))}X.closePath();X.stroke();X.shadowBlur=0;X.fillStyle=p.d.c;X.font='bold 10px "Oxanium"';X.textAlign='center';X.textBaseline='middle';X.fillText(p.d.i,0,0);X.restore()}
+function drawPart(pt){const a=pt.life/pt.ml,h=Math.floor(a*255).toString(16).padStart(2,'0');if(pt.type==='char'){X.fillStyle=pt.c+h;X.font=`${pt.sz}px "Oxanium"`;X.fillText(pt.ch,pt.x+g.sx,pt.y+g.sy)}else{X.fillStyle=pt.c+h;X.shadowColor=pt.c;X.shadowBlur=4*a;X.beginPath();X.arc(pt.x+g.sx,pt.y+g.sy,pt.sz*a,0,Math.PI*2);X.fill();X.shadowBlur=0}}
+
+// ============================================================
+//  EFFECTS
+// ============================================================
+function boom(x,y,c,n){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,sp=0.5+Math.random()*4;g.pt.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:15+Math.random()*20,ml:35,c,sz:0.8+Math.random()*2.5,type:'dot'})}const fr='01<>{}CVE-RCE'.split('');for(let i=0;i<Math.min(n/4,3);i++){const a=Math.random()*Math.PI*2,sp=0.2+Math.random()*1.3;g.pt.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-0.4,life:22+Math.random()*16,ml:38,c,ch:fr[~~(Math.random()*fr.length)],sz:7+Math.random()*3,type:'char'})}}
+function spawnOrbs(x,y,c,n){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,sp=1+Math.random()*3;g.orbs.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,c,sz:2+Math.random()*2,ph:Math.random()*6,val:10,life:300})}}
+function shake(m,d){g.sT=d;g.sM=m}
+function flashDmg(){const e=document.getElementById('dmg-v');e.classList.add('on');setTimeout(()=>e.classList.remove('on'),120)}
+function col(ax,ay,ar,bx,by,br){return(ax-bx)**2+(ay-by)**2<(ar+br)**2}
+function scorePop(x,y,v,c){const e=document.createElement('div');e.className='sc-pop';e.style.left=(x-20)+'px';e.style.top=(y-10)+'px';e.style.color=c;e.style.textShadow=`0 0 10px ${c}66`;e.textContent='+'+v;document.body.appendChild(e);setTimeout(()=>e.remove(),1000)}
+function showFact(x,y,type){const t=T[type];if(!t)return;const av=t.facts.filter((_,i)=>!g.factsUsed.has(type+i));if(!av.length||Math.random()>0.28)return;const idx=t.facts.indexOf(av[~~(Math.random()*av.length)]);g.factsUsed.add(type+idx);const e=document.createElement('div');e.className='kf';e.style.left=Math.min(W-230,Math.max(8,x-105))+'px';e.style.top=Math.min(H-55,Math.max(35,y-20))+'px';e.style.borderColor=t.c;e.innerHTML=`<div class="kft">${t.cat}: ${t.n}</div>${t.facts[idx]}`;document.body.appendChild(e);setTimeout(()=>e.remove(),3000)}
+function toast(text,c){const e=document.createElement('div');e.className='kf';e.style.left='50%';e.style.top='56%';e.style.transform='translateX(-50%)';e.style.borderColor=c;e.style.color=c;e.style.textAlign='center';e.style.fontSize='11px';e.textContent=text;document.body.appendChild(e);setTimeout(()=>e.remove(),1800)}
+function streakPop(text,c){const e=document.createElement('div');e.className='sp';e.style.color=c;e.style.textShadow=`0 0 25px ${c}55`;e.textContent=text;document.body.appendChild(e);setTimeout(()=>e.remove(),1900)}
+
+// ============================================================
+//  WAVE + TRIVIA + AI BRIEFING MANAGEMENT
+// ============================================================
+function startWaveSpawn(){const wc=wCfg(g.wave);g.spQ=[];for(let i=0;i<wc.count;i++)g.spQ.push(wc.pool[~~(Math.random()*wc.pool.length)]);wc.bosses.forEach(b=>g.spQ.push(b));for(let i=g.spQ.length-1;i>0;i--){const j=~~(Math.random()*(i+1));[g.spQ[i],g.spQ[j]]=[g.spQ[j],g.spQ[i]]}wc.bosses.forEach(b=>{const i=g.spQ.indexOf(b);if(i>-1){g.spQ.splice(i,1);g.spQ.push(b)}});g.spT=15;g.wCD=0;document.getElementById('w-tag').textContent='WAVE '+g.wave;const wp=document.getElementById('w-pop');document.getElementById('wp-n').textContent='WAVE '+g.wave;document.getElementById('wp-s').textContent=WNAMES[(g.wave-1)%WNAMES.length];wp.className='';void wp.offsetWidth;wp.classList.add('on');setTimeout(()=>wp.classList.remove('on'),2900);if(wc.isBoss)setTimeout(()=>{Snd.boss();document.getElementById('boss-bar').style.display='block';const bt=T[wc.bosses[wc.bosses.length-1]];document.getElementById('bb-name').textContent=bt.n.toUpperCase();document.getElementById('bb-name').style.color=bt.c;document.getElementById('bb-fill').style.background=bt.c;document.getElementById('bb-fill').style.boxShadow=`0 0 10px ${bt.c}66`;g.bossMHP=bt.hp;g.bossHP=bt.hp},1200)}
+function spawnNext(){if(!g.spQ.length)return;const type=g.spQ.shift();const t=T[type];const wc=wCfg(g.wave);g.en.push({x:20+Math.random()*(W-40),y:-20-Math.random()*30,type,hp:t.hp,speed:t.sp*wc.spMul,ph:Math.random()*6.28,wobA:10+Math.random()*20,rot:0,rs:0.008+Math.random()*0.014,fcd:t.shoots?~~(Math.random()*t.shootRate):9999});if(!g.threatsRun.includes(type))g.threatsRun.push(type);if(t.boss)Snd.boss()}
+
+// Between waves: decide trivia or AI briefing
+async function onWaveClear() {
+  g.wave++;
+  const showTrivia = g.wave > 1 && g.wave % 2 === 0; // Every even wave = trivia
+  if (showTrivia) {
+    showTriviaRound();
+  } else {
+    showAIBriefing();
+  }
+}
+
+// ---- TRIVIA BONUS ROUND ----
+let triviaTimerID = null;
+let triviaTimeLeft = 15;
+
+function showTriviaRound() {
+  const q = getTrivia();
+  if (!q) { showAIBriefing(); return; } // Fallback if no trivia
+
+  const panel = document.getElementById('trivia-panel');
+  const qEl = document.getElementById('triv-q');
+  const optsEl = document.getElementById('triv-opts');
+  const resultEl = document.getElementById('triv-result');
+  const timerEl = document.getElementById('triv-timer');
+  const contBtn = document.getElementById('triv-continue');
+
+  qEl.textContent = q.question;
+  resultEl.className = 'trivia-result';
+  resultEl.style.display = 'none';
+  contBtn.style.display = 'none';
+  timerEl.style.width = '100%';
+  triviaTimeLeft = 15;
+
+  // Shuffle answers
+  const answers = [...q.wrong, q.correct].sort(() => Math.random() - 0.5);
+  optsEl.innerHTML = answers.map((a, i) => `<div class="trivia-opt" data-idx="${i}" data-correct="${a === q.correct}" onclick="triviaAnswer(this, ${a === q.correct})">${a}</div>`).join('');
+
+  panel.classList.add('on');
+  g.triviaTotal++;
+
+  // Timer countdown
+  clearInterval(triviaTimerID);
+  triviaTimerID = setInterval(() => {
+    triviaTimeLeft -= 0.1;
+    timerEl.style.width = Math.max(0, (triviaTimeLeft / 15) * 100) + '%';
+    if (triviaTimeLeft <= 0) {
+      clearInterval(triviaTimerID);
+      triviaTimeout(q.correct);
+    }
+  }, 100);
+}
+
+function triviaAnswer(el, correct) {
+  clearInterval(triviaTimerID);
+  const opts = document.querySelectorAll('.trivia-opt');
+  opts.forEach(o => {
+    o.classList.add('disabled');
+    if (o.dataset.correct === 'true') o.classList.add('reveal');
+  });
+
+  const resultEl = document.getElementById('triv-result');
+  const contBtn = document.getElementById('triv-continue');
+
+  if (correct) {
+    el.classList.add('correct');
+    Snd.correct();
+    g.triviaCorrect++;
+    const bonus = 500;
+    g.score += bonus;
+    g.p.hp = Math.min(g.p.mhp, g.p.hp + 25);
+    g.p.en = g.p.men;
+    resultEl.className = 'trivia-result correct-r';
+    resultEl.textContent = `✓ CORRECT! +${bonus} points, +25 HP, full energy recharged!`;
+  } else {
+    el.classList.add('wrong');
+    Snd.wrong();
+    const bonus = 100;
+    g.score += bonus;
+    resultEl.className = 'trivia-result wrong-r';
+    resultEl.textContent = `✗ Wrong! The correct answer was highlighted. +${bonus} consolation points.`;
+  }
+  resultEl.style.display = 'block';
+  contBtn.style.display = 'block';
+}
+
+function triviaTimeout(correct) {
+  const opts = document.querySelectorAll('.trivia-opt');
+  opts.forEach(o => {
+    o.classList.add('disabled');
+    if (o.dataset.correct === 'true') o.classList.add('reveal');
+  });
+  const resultEl = document.getElementById('triv-result');
+  const contBtn = document.getElementById('triv-continue');
+  Snd.wrong();
+  resultEl.className = 'trivia-result wrong-r';
+  resultEl.textContent = `⏰ Time's up! The answer has been highlighted. Stay sharp!`;
+  resultEl.style.display = 'block';
+  contBtn.style.display = 'block';
+}
+
+// ---- AI BRIEFING ----
+async function showAIBriefing() {
+  const wc = wCfg(g.wave);
+  const allT = [...new Set([...wc.pool, ...wc.bosses])];
+  const chips = allT.map(k=>{const t=T[k];return`<div class="brief-chip"><div class="dot" style="background:${t.c}"></div>${t.n}${t.boss?'<span class="new-tag">BOSS</span>':''}</div>`}).join('');
+  document.getElementById('brief-wave-tag').textContent=`WAVE ${g.wave} // ${WNAMES[(g.wave-1)%WNAMES.length].toUpperCase()}`;
+  document.getElementById('brief-threats').innerHTML=chips;
+  document.getElementById('brief-msg').innerHTML='<div class="ai-typing"><span></span><span></span><span></span></div>';
+  document.getElementById('brief-go-btn').disabled=true;
+  document.getElementById('brief-go-btn').textContent='Analyzing...';
+  document.getElementById('ai-brief').classList.add('on');
+
+  const threatNames=[...new Set(allT)].map(t=>T[t]?.n||t).join(', ');
+  const prompt=`WAVE ${g.wave} BRIEFING. Incoming: ${threatNames}. ${wc.isBoss?'BOSS WAVE.':''} HP ${g.p.hp}/100, Score ${g.score}. ${g.wave===1?'First wave — welcome and explain briefly.':''} ${g.wave>=5?'Player is doing well.':''} ${wc.isBoss?'Warn about boss, give tactical advice.':''} Tactical briefing using REAL cybersecurity knowledge.`;
+  const resp = await askAI(AI_SYS, prompt);
+  document.getElementById('brief-msg').innerHTML=formatAI(resp);
+  document.getElementById('brief-go-btn').disabled=false;
+  document.getElementById('brief-go-btn').textContent='Deploy →';
+}
+
+const G = {
+  nextWave() {
+    document.getElementById('ai-brief').classList.remove('on');
+    startWaveSpawn();
+    g.on = true;
+    loop();
+  },
+  triviaNext() {
+    document.getElementById('trivia-panel').classList.remove('on');
+    clearInterval(triviaTimerID);
+    showAIBriefing(); // After trivia, show AI briefing
+  }
+};
+
+// ============================================================
+//  UPDATE
+// ============================================================
+function update(){
+  g.tick++;if(g.slowT>0){g.slowT--;g.dt=0.3}else g.dt=1;
+  const p=g.p;g.intensity=Math.min(1,g.intensity*0.98+(g.en.length/30)*0.02);
+  let dx=0,dy=0;if(keys.ArrowLeft||keys.KeyA)dx=-1;if(keys.ArrowRight||keys.KeyD)dx=1;if(keys.ArrowUp||keys.KeyW)dy=-1;if(keys.ArrowDown||keys.KeyS)dy=1;if(dx&&dy){dx*=0.707;dy*=0.707}
+  if(p.dcd>0)p.dcd--;if((keys.ShiftLeft||keys.ShiftRight)&&p.dcd<=0&&(dx||dy)&&p.en>=12){p.dash=true;p.dt=7;p.ddx=dx;p.ddy=dy;p.dcd=22;p.en-=12;p.inv=Math.max(p.inv,9);Snd.dash()}
+  if(p.dash){p.x+=p.ddx*14*g.dt;p.y+=p.ddy*14*g.dt;p.dt--;if(p.dt<=0)p.dash=false}else{p.x+=dx*6*g.dt;p.y+=dy*6*g.dt}
+  p.x=Math.max(14,Math.min(W-14,p.x));p.y=Math.max(24,Math.min(H-14,p.y));
+  if(g.tick%2===0)g.trail.push({x:p.x,y:p.y,life:12,ml:12});g.trail=g.trail.filter(t=>{t.life--;return t.life>0});
+  if(p.fcd>0)p.fcd--;if(p.inv>0)p.inv--;if(p.empCD>0)p.empCD--;p.en=Math.min(p.men,p.en+0.12);if(p.wepT>0){p.wepT--;if(p.wepT<=0)p.wep='single'}
+  if(keys.Space&&p.fcd<=0){const rate=p.wep==='rapid'?3:p.fr;p.fcd=rate;Snd.shoot();const addB=(ox,a)=>g.bul.push({x:p.x+ox,y:p.y-16,vx:Math.sin(a)*11,vy:-Math.cos(a)*11});if(p.wep==='spread'){addB(-6,-0.12);addB(0,0);addB(6,0.12)}else addB(0,0)}
+  if(keys.KeyE&&p.en>=35&&p.empCD<=0){p.en-=35;p.empCD=80;Snd.emp();g.en.forEach(e=>{if(Math.hypot(e.x-p.x,e.y-p.y)<150){e.hp-=3;boom(e.x,e.y,T[e.type].c,4)}});for(let i=0;i<28;i++){const a=Math.PI*2*i/28;g.pt.push({x:p.x+Math.cos(a)*16,y:p.y+Math.sin(a)*16,vx:Math.cos(a)*5,vy:Math.sin(a)*5,life:10,ml:10,c:'#a040ff',sz:2,type:'dot'})}shake(4,7)}
+  if(g.comboT>0){g.comboT--;if(g.comboT<=0)g.combo=0}if(g.streakT>0){g.streakT--;if(g.streakT<=0)g.streak=0}
+  g.bul=g.bul.filter(b=>{b.x+=b.vx*g.dt;b.y+=b.vy*g.dt;return b.y>-15&&b.y<H+15&&b.x>-15&&b.x<W+15});
+  g.eBul=g.eBul.filter(b=>{b.x+=b.vx*g.dt;b.y+=b.vy*g.dt;if(p.inv<=0&&col(p.x,p.y,10,b.x,b.y,b.r||3)){p.hp-=8;p.inv=30;boom(p.x,p.y,'#ff2060',5);Snd.hurt();flashDmg();shake(3,5);g.streak=0;g.killedBy='enemy fire';if(p.hp<=0){gameOver();return false}return false}return b.y>-15&&b.y<H+15&&b.x>-15&&b.x<W+15});
+  if(g.spQ.length>0){g.spT--;if(g.spT<=0){spawnNext();g.spT=Math.max(8,32-g.wave*2)}}
+  let bossRef=null;
+  g.en=g.en.filter(e=>{const t=T[e.type];e.y+=e.speed*g.dt;e.x+=Math.sin(g.tick*0.02+e.ph)*(e.wobA*0.016)*g.dt;
+    if(t.shoots){e.fcd--;if(e.fcd<=0&&e.y>0&&e.y<H-50){e.fcd=t.shootRate;const ddx=p.x-e.x,ddy=p.y-e.y,d=Math.hypot(ddx,ddy)||1;if(t.pattern==='ring'){for(let i=0;i<8;i++){const a=Math.PI*2*i/8;g.eBul.push({x:e.x,y:e.y,vx:Math.cos(a)*t.bulletSpeed,vy:Math.sin(a)*t.bulletSpeed,c:t.bulletColor,r:3.5})}}else if(t.pattern==='spread'){for(let i=-1;i<=1;i++){const a=Math.atan2(ddy,ddx)+i*0.3;g.eBul.push({x:e.x,y:e.y,vx:Math.cos(a)*t.bulletSpeed,vy:Math.sin(a)*t.bulletSpeed,c:t.bulletColor,r:3})}}else g.eBul.push({x:e.x,y:e.y,vx:ddx/d*t.bulletSpeed,vy:ddy/d*t.bulletSpeed,c:t.bulletColor,r:3})}}
+    if(t.boss)bossRef=e;
+    for(let i=g.bul.length-1;i>=0;i--){const b=g.bul[i];if(col(b.x,b.y,4,e.x,e.y,t.sz)){g.bul.splice(i,1);e.hp--;boom(e.x,e.y,t.c,3);Snd.hit();if(t.boss){g.bossHP=e.hp;document.getElementById('bb-fill').style.width=(e.hp/t.hp*100)+'%'}if(e.hp<=0){g.combo++;g.comboT=80;g.maxC=Math.max(g.maxC,g.combo);g.streak++;g.streakT=100;g.bestSt=Math.max(g.bestSt,g.streak);const mult=Math.min(g.combo,12);const pts=t.sc*mult;g.score+=pts;g.kills++;boom(e.x,e.y,t.c,18+(t.boss?25:0));Snd.kill();scorePop(e.x,e.y,pts,t.c);spawnOrbs(e.x,e.y,t.c,t.boss?15:3);if(t.boss){shake(12,18);g.slowT=40;document.getElementById('boss-bar').style.display='none';streakPop('BOSS ELIMINATED','#ffcc00')}else shake(2,4);if(g.streak===10){streakPop('KILL STREAK',t.c);Snd.streak()}if(g.streak===25)streakPop('UNSTOPPABLE','#ff40aa');if(g.streak===50)streakPop('LEGENDARY','#ffcc00');if(g.streak===100)streakPop('GODLIKE','#fff');if(!g.unlocked.includes(e.type)){g.unlocked.push(e.type);localStorage.setItem('thCX4',JSON.stringify(g.unlocked));toast('INTEL: '+t.n+' unlocked',t.c)}showFact(e.x,e.y,e.type);if(Math.random()<(t.boss?1:0.15)){const pu=PUS[~~(Math.random()*PUS.length)];g.pups.push({x:e.x,y:e.y,d:pu,age:0})}return false}return true}}
+    if(p.inv<=0&&col(p.x,p.y,12,e.x,e.y,t.sz)){const dmg=t.boss?25:10;p.hp-=dmg;p.inv=35;boom(p.x,p.y,'#ff2060',8);Snd.hurt();flashDmg();shake(6,10);g.streak=0;g.killedBy=t.n;if(p.hp<=0){gameOver();return false}}return e.y<H+40});
+  if(bossRef){g.bossHP=bossRef.hp;document.getElementById('bb-fill').style.width=(bossRef.hp/T[bossRef.type].hp*100)+'%'}
+  g.orbs=g.orbs.filter(o=>{o.life--;const ddx=p.x-o.x,ddy=p.y-o.y,d=Math.hypot(ddx,ddy);if(d<120){const pull=Math.min(8,(120-d)/15);o.vx+=ddx/d*pull*0.15;o.vy+=ddy/d*pull*0.15}o.vx*=0.96;o.vy*=0.96;o.x+=o.vx;o.y+=o.vy;if(d<14){g.score+=o.val;Snd.orb();return false}return o.life>0});
+  g.pups=g.pups.filter(pu=>{pu.y+=0.3;pu.age++;if(col(p.x,p.y,16,pu.x,pu.y,12)){Snd.pu();switch(pu.d.id){case'heal':p.hp=Math.min(p.mhp,p.hp+40);toast(pu.d.l,pu.d.c);break;case'spread':p.wep='spread';p.wepT=450;toast(pu.d.l,pu.d.c);break;case'rapid':p.wep='rapid';p.wepT=350;toast(pu.d.l,pu.d.c);break;case'shield':p.hp=p.mhp;p.en=p.men;toast(pu.d.l,pu.d.c);break;case'nuke':g.en.forEach(e=>{boom(e.x,e.y,T[e.type].c,10);g.score+=T[e.type].sc;g.kills++;spawnOrbs(e.x,e.y,T[e.type].c,2)});g.en=[];g.eBul=[];shake(12,18);toast(pu.d.l,pu.d.c);break;case'slow':g.slowT=180;toast(pu.d.l,pu.d.c);break}boom(pu.x,pu.y,pu.d.c,8);return false}return pu.y<H+15&&pu.age<400});
+  g.pt=g.pt.filter(pt=>{pt.x+=pt.vx*g.dt;pt.y+=pt.vy*g.dt;pt.vy+=0.015;pt.vx*=0.99;pt.life--;return pt.life>0});
+  if(g.sT>0){g.sT--;const m=g.sM*(g.sT/10);g.sx=(Math.random()-0.5)*m;g.sy=(Math.random()-0.5)*m}else{g.sx=0;g.sy=0}
+  if(g.spQ.length===0&&g.en.length===0){g.wCD++;if(g.wCD>50){g.on=false;onWaveClear()}}
+  updateHUD();
+}
+
+function updateHUD(){const p=g.p;const hp=Math.max(0,p.hp/p.mhp*100);document.getElementById('hp-n').textContent=Math.ceil(p.hp);const hb=document.getElementById('hp-b');hb.style.width=hp+'%';hb.className='bar-f hp-f'+(hp<25?' lo':'');document.getElementById('en-b').style.width=(p.en/p.men*100)+'%';document.getElementById('sc-n').textContent=g.score.toLocaleString();document.getElementById('hs-n').textContent=g.hi.toLocaleString();const ch=document.getElementById('combo-h');if(g.combo>1){ch.textContent='×'+g.combo;ch.classList.add('on')}else ch.classList.remove('on');const sh=document.getElementById('streak-h');if(g.streak>=5){sh.textContent=g.streak+' STREAK';sh.classList.add('on')}else sh.classList.remove('on')}
+function draw(){drawBG();drawTrail();g.orbs.forEach(drawOrb);g.pups.forEach(drawPU);g.en.forEach(drawEn);g.eBul.forEach(drawEBul);g.bul.forEach(drawBul);drawP();g.pt.forEach(drawPart);if(g.slowT>0){X.fillStyle='rgba(0,255,255,0.03)';X.fillRect(0,0,W,H)}}
+function loop(){if(!g.on)return;update();draw();requestAnimationFrame(loop)}
+
+// ============================================================
+//  GAME OVER
+// ============================================================
+async function gameOver(){
+  g.on=false;document.getElementById('hud').style.display='none';document.getElementById('boss-bar').style.display='none';
+  const isNew=g.score>g.hi;if(isNew){g.hi=g.score;localStorage.setItem('thHS4',g.hi)}
+  document.getElementById('go-hs').classList.toggle('hide',!isNew);
+  document.getElementById('go-sub').textContent=`Breached at wave ${g.wave}`;
+  document.getElementById('go-stats').innerHTML=`
+    <div class="st"><div class="sl">Score</div><div class="sv">${g.score.toLocaleString()}</div></div>
+    <div class="st"><div class="sl">Best</div><div class="sv">${g.hi.toLocaleString()}</div></div>
+    <div class="st"><div class="sl">Wave</div><div class="sv">${g.wave}</div></div>
+    <div class="st"><div class="sl">Kills</div><div class="sv">${g.kills}</div></div>
+    <div class="st"><div class="sl">Max Combo</div><div class="sv">×${g.maxC}</div></div>
+    <div class="st"><div class="sl">Trivia</div><div class="sv">${g.triviaCorrect}/${g.triviaTotal}</div></div>`;
+  document.getElementById('ai-debrief-msg').innerHTML='<div class="ai-typing"><span></span><span></span><span></span></div>';
+  document.getElementById('go-scr').classList.remove('hide');
+  setTimeout(()=>document.getElementById('name-in').focus(),100);
+  const prompt=`DEBRIEF. Wave ${g.wave}, Score ${g.score}, Kills ${g.kills}, Combo ×${g.maxC}, Streak ${g.bestSt}, Trivia ${g.triviaCorrect}/${g.triviaTotal}. ${g.killedBy?'Killed by: '+g.killedBy+'.':''} Threats: ${[...new Set(g.threatsRun)].map(t=>T[t]?.n||t).join(', ')}. ${g.wave<=2?'Died early.':''} ${g.wave>=8?'Impressive.':''} ${g.wave>=15?'Elite.':''} Debrief with one real cybersecurity lesson.`;
+  const resp=await askAI(AI_SYS,prompt);
+  document.getElementById('ai-debrief-msg').innerHTML=formatAI(resp);
+}
+
+function shareResult(){const name=(document.getElementById('name-in').value.trim()||'AGENT').toUpperCase();g.name=name;localStorage.setItem('thN3',name);const txt=`🛡️ ${name} survived Wave ${g.wave} in THREAT HUNTER!\n\n💀 Score: ${g.score.toLocaleString()}\n🔥 ${g.kills} kills | ×${g.maxC} combo | ${g.bestSt} streak\n🧠 Trivia: ${g.triviaCorrect}/${g.triviaTotal} correct\n📡 ${g.unlocked.length}/${Object.keys(T).length} threats identified\n🤖 AI-powered | Live CVE feed | Trivia challenges\n\nCan you beat my score?\n#ThreatHunter #CyberSecurity`;if(navigator.share)navigator.share({title:'THREAT HUNTER',text:txt}).catch(()=>fbCopy(txt));else fbCopy(txt)}
+function fbCopy(t){navigator.clipboard.writeText(t).then(()=>{const e=document.getElementById('share-toast');e.classList.add('on');setTimeout(()=>e.classList.remove('on'),2000)}).catch(()=>prompt('Copy:',t))}
+
+function startGame(){Snd.i();document.querySelectorAll('.ov').forEach(e=>e.classList.add('hide'));document.getElementById('ai-brief').classList.remove('on');document.getElementById('trivia-panel').classList.remove('on');clearInterval(triviaTimerID);reset();g.p=mkP();g.hi=+localStorage.getItem('thHS4')||0;g.unlocked=JSON.parse(localStorage.getItem('thCX4')||'[]');g.name=localStorage.getItem('thN3')||'';initBG();document.getElementById('hud').style.display='block';document.getElementById('hs-n').textContent=g.hi.toLocaleString();showAIBriefing()}
+
+// ============================================================
+//  CODEX WITH AI CHAT
+// ============================================================
+function showCodex(){const gr=document.getElementById('cx-grid');const all=Object.keys(T);const ul=JSON.parse(localStorage.getItem('thCX4')||'[]');document.getElementById('cx-prog').textContent=ul.length+' / '+all.length+' collected';gr.innerHTML=all.map(k=>{const t=T[k],on=ul.includes(k);return`<div class="cx-card ${on?'on':''}"><div style="display:flex;justify-content:space-between;align-items:center"><div class="cx-cn" style="color:${on?t.c:'#fff2'}">${on?t.n:'???'}</div>${!on?'<div class="cx-cat">LOCKED</div>':`<div class="cx-cat" style="color:${t.c}66">${t.cat}</div>`}</div><p>${on?t.desc:'Defeat this threat to unlock intel.'}</p>${on?`<div class="rw"><strong>Real-world:</strong> ${t.real}</div><div class="df"><strong>Defense:</strong> ${t.def}</div><div class="ai-chat-box"><div class="ai-chat-resp" id="chat-r-${k}"></div><div class="ai-chat-input-row"><input class="ai-chat-input" id="chat-i-${k}" placeholder="Ask SENTINEL about ${t.n}..." onkeydown="if(event.key==='Enter')cxAsk('${k}')"><button class="ai-chat-send" onclick="cxAsk('${k}')">ASK AI</button></div></div>`:''}</div>`}).join('');document.getElementById('codex-scr').classList.remove('hide')}
+function hideCodex(){document.getElementById('codex-scr').classList.add('hide')}
+async function cxAsk(k){const inp=document.getElementById('chat-i-'+k);const resp=document.getElementById('chat-r-'+k);const q=inp.value.trim();inp.value='';resp.style.display='block';resp.innerHTML='<div class="ai-typing"><span></span><span></span><span></span></div>';const t=T[k];const prompt=q?`Player asks about "${t.n}" (${t.cat}): "${q}"\nContext: ${t.desc} Real: ${t.real} Def: ${t.def}\nAnswer using real cybersecurity knowledge. 2-3 paragraphs max.`:`Deep dive on "${t.n}" (${t.cat}). ${t.desc} Real: ${t.real} Def: ${t.def}\nExplain how it works technically, mention 1-2 specific CVEs or incidents beyond listed, give practical advice. Keep it interesting.`;const ans=await askAI(AI_SYS,prompt);resp.innerHTML=formatAI(ans)}
+
+// Menu BG
+function menuLoop(){if(g.on){requestAnimationFrame(menuLoop);return}if(!g.bg.rain||!g.bg.rain.length)initBG();drawBG();requestAnimationFrame(menuLoop)}
+initBG();menuLoop();
+
+// Ping APIs on load
+setTimeout(()=>{ setAPI('api-ai','live'); /* Assume live until first call */ },500);
+</script>
+</body>
+</html>
