@@ -9,7 +9,7 @@
 
 ## 🎮 Play Now
 
-**[▶ Live Demo](https://threat-hunter.vercel.app)** *(update after deployment)*
+**[▶ Live Demo](https://threat-hunter-gules.vercel.app)/** *(update after deployment)*
 
 ---
 
